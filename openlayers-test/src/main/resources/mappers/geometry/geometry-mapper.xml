@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.enjoybt.demo.geometry.dao.GeomDAO">
+
+	<select id="selectFeaturesByEmd" parameterType="java.lang.String" resultType="java.util.HashMap">
+		SELECT 
+			'POI' AS TYPE,
+			OSM_ID, 
+			CODE, 
+			FCLASS, 
+			0 AS POPULATION, 
+			NAME, 
+			ST_ASTEXT(GOPF.GEOM) AS GEOM
+		FROM 
+			GIS_OSM_POIS_FREE_1 GOPF,
+			TL_SCCO_EMD TSE 
+		WHERE 
+			TSE.EMD_CD = #{value} AND
+			ST_INTERSECTS(TSE.GEOM, GOPF.GEOM) = TRUE
+		UNION ALL
+		SELECT
+			'PLACE' AS TYPE, 
+			OSM_ID, 
+			CODE, 
+			FCLASS, 
+			POPULATION, 
+			NAME, 
+			ST_ASTEXT(GOPF.GEOM) AS GEOM
+		FROM 
+			GIS_OSM_PLACES_FREE_1 GOPF ,
+			TL_SCCO_EMD TSE 
+		WHERE 
+			TSE.EMD_CD = #{value} AND
+			ST_INTERSECTS(TSE.GEOM, GOPF.GEOM) = TRUE
+	</select>
+	
+	<select id="selectFeaturesByBound" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			'CIRCLE' AS TYPE,
+			'' AS OSM_ID,
+			0 AS CODE,
+			'geometry' AS FCLASS,
+			0 AS POPULATION,
+			'circle' AS NAME,
+			ST_ASTEXT(ST_TRANSFORM(ST_BUFFER(ST_TRANSFORM(ST_GEOMFROMTEXT(#{geom},'4326'), 5179), #{buffer}, 'quad_segs=360'
+				<if test="side != null and side != ''">
+					||' side='||#{side}
+				</if>
+			), 4326)) AS GEOM
+		UNION ALL
+		SELECT 
+			'POI' AS TYPE,
+			OSM_ID, 
+			CODE, 
+			FCLASS, 
+			0 AS POPULATION, 
+			NAME, 
+			ST_ASTEXT(GEOM) AS GEOM
+		FROM 
+			GIS_OSM_POIS_FREE_1 GOPF
+		WHERE 
+			ST_INTERSECTS(ST_TRANSFORM(ST_BUFFER(ST_TRANSFORM(ST_GEOMFROMTEXT(#{geom},'4326'), 5179), #{buffer}
+				<if test="side != null and side != ''">
+					, 'side='||#{side}
+				</if>
+			), 4326), GOPF.GEOM ) = TRUE
+		UNION ALL
+		SELECT 
+			'PLACE' AS TYPE,
+			OSM_ID, 
+			CODE, 
+			FCLASS, 
+			POPULATION, 
+			NAME, 
+			ST_ASTEXT(GEOM) AS GEOM
+		FROM 
+			GIS_OSM_PLACES_FREE_1 GOPF
+		WHERE 
+			ST_INTERSECTS(ST_TRANSFORM(ST_BUFFER(ST_TRANSFORM(ST_GEOMFROMTEXT(#{geom},'4326'), 5179), #{buffer}
+				<if test="side != null and side != ''">
+					, 'side='||#{side}
+				</if>
+			), 4326), GOPF.GEOM ) = TRUE
+	</select>
+	
+</mapper>
